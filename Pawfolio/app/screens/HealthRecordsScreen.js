@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react"
 import {
   View,
   Text,
@@ -6,183 +6,484 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   Modal,
-} from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import Toast from "react-native-toast-message";
-
-// Dummy pet database (simulate fetching from Firebase)
-const fetchPetsFromDatabase = () => {
-  return ["Buddy", "Whiskers", "Max"];
-};
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView,
+  Alert,
+} from "react-native"
+import DateTimePicker from "@react-native-community/datetimepicker"
+import { Ionicons } from "@expo/vector-icons"
+import Toast from "react-native-toast-message"
+import { Picker } from "@react-native-picker/picker"
+import { useNavigation } from "@react-navigation/native"
+import * as Animatable from "react-native-animatable"
 
 export default function HealthRecordsScreen() {
-  const [records, setRecords] = useState([]);
-  const [search, setSearch] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedPet, setSelectedPet] = useState("All");
-  const [pets, setPets] = useState([]);
-  const [recordData, setRecordData] = useState({
-    type: "",
-    vet: "",
+  const navigation = useNavigation()
+
+  const [pets, setPets] = useState([
+    { id: "1", name: "Max" },
+    { id: "2", name: "Bella" },
+    { id: "3", name: "Charlie" },
+  ])
+
+  const dateFilterOptions = ["All", "Today", "This Week", "This Month", "This Year"]
+  const [filterPet, setFilterPet] = useState("all")
+  const [filterDate, setFilterDate] = useState("All")
+  const [search, setSearch] = useState("")
+
+  const [records, setRecords] = useState([])
+  const [modalVisible, setModalVisible] = useState(false)
+  const [editingRecordId, setEditingRecordId] = useState(null)
+
+  const [healthData, setHealthData] = useState({
+    petIds: [],
+    visitType: "",
+    vetLoc: "",
     notes: "",
-    date: new Date().toISOString().split("T")[0],
-    petName: "",
-  });
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+    date: new Date(),
+  })
 
-  useEffect(() => {
-    const petData = fetchPetsFromDatabase();
-    setPets(["All", ...petData]);
-  }, []);
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
 
-  const handleAddRecord = () => {
-    if (!recordData.type || !recordData.vet || !recordData.notes || !recordData.petName || !recordData.date) {
-      Alert.alert("Error", "Please fill in all fields.");
-      return;
+  const togglePetSelection = (petId) => {
+    setHealthData((prev) => ({
+      ...prev,
+      petIds: prev.petIds.includes(petId) ? prev.petIds.filter((id) => id !== petId) : [...prev.petIds, petId],
+    }))
+  }
+
+  const toggleAllPets = () => {
+    if (healthData.petIds.length === pets.length) {
+      setHealthData((prev) => ({ ...prev, petIds: [] }))
+    } else {
+      setHealthData((prev) => ({ ...prev, petIds: pets.map((p) => p.id) }))
+    }
+  }
+
+  const handleAddOrUpdateRecord = () => {
+    if (!healthData.petIds.length || !healthData.visitType || !healthData.vetLoc || !healthData.date) {
+      Toast.show({
+        type: "error",
+        text1: "Please fill all required fields.",
+      })
+      return
     }
 
-    setRecords([...records, { ...recordData, id: String(Date.now()) }]);
-    setModalVisible(false);
-    setRecordData({ type: "", vet: "", notes: "", date: new Date().toISOString().split("T")[0], petName: "" });
-    Toast.show({ type: "success", text1: "Health Record Added Successfully!" });
-  };
+    if (editingRecordId) {
+      // Update existing record
+      setRecords((prev) =>
+        prev.map((record) =>
+          record.id === editingRecordId
+            ? {
+                ...record,
+                petId: healthData.petIds[0],
+                visitType: healthData.visitType,
+                vetLoc: healthData.vetLoc,
+                notes: healthData.notes,
+                date: healthData.date,
+              }
+            : record,
+        ),
+      )
+      Toast.show({ type: "success", text1: "Health record updated!" })
+    } else {
+      // Create new records
+      const newRecords = healthData.petIds.map((petId) => ({
+        id: `${Date.now()}-${petId}`,
+        petId,
+        visitType: healthData.visitType,
+        vetLoc: healthData.vetLoc,
+        notes: healthData.notes,
+        date: healthData.date,
+      }))
 
-  const handleDelete = (id) => {
-    Alert.alert("Delete Record", "Are you sure you want to delete this record?", [
+      setRecords((prev) => [...newRecords, ...prev])
+      Toast.show({ type: "success", text1: "Record(s) added successfully!" })
+    }
+
+    setHealthData({
+      petIds: [],
+      visitType: "",
+      vetLoc: "",
+      notes: "",
+      date: new Date(),
+    })
+    setModalVisible(false)
+    setEditingRecordId(null)
+  }
+
+  const handleEditRecord = (record) => {
+    setEditingRecordId(record.id)
+    setHealthData({
+      petIds: [record.petId],
+      visitType: record.visitType,
+      vetLoc: record.vetLoc,
+      notes: record.notes,
+      date: new Date(record.date),
+    })
+    setModalVisible(true)
+  }
+
+  const handleDeleteRecord = (recordId) => {
+    Alert.alert("Delete Health Record", "Are you sure you want to delete this record?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Delete", onPress: () => {
-        setRecords(records.filter((record) => record.id !== id));
-        Toast.show({ type: "success", text1: "Record Deleted Successfully!" });
-      }},
-    ]);
-  };
+      {
+        text: "Delete",
+        onPress: () => {
+          setRecords((prev) => prev.filter((record) => record.id !== recordId))
+          Toast.show({ type: "success", text1: "Record deleted!" })
+        },
+        style: "destructive",
+      },
+    ])
+  }
 
-  const filteredRecords = records.filter(
-    (record) => (selectedPet === "All" || record.petName === selectedPet) && record.date === selectedDate
-  );
+  const formatDate = (date) => date.toISOString().split("T")[0]
+  const formatTime = (date) => date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+
+  const onChangeDate = (event, selectedDate) => {
+    setShowDatePicker(false)
+    if (selectedDate) {
+      const updated = new Date(healthData.date)
+      updated.setFullYear(selectedDate.getFullYear())
+      updated.setMonth(selectedDate.getMonth())
+      updated.setDate(selectedDate.getDate())
+      setHealthData({ ...healthData, date: updated })
+    }
+  }
+
+  const onChangeTime = (event, selectedTime) => {
+    setShowTimePicker(false)
+    if (selectedTime) {
+      const updated = new Date(healthData.date)
+      updated.setHours(selectedTime.getHours())
+      updated.setMinutes(selectedTime.getMinutes())
+      setHealthData({ ...healthData, date: updated })
+    }
+  }
+
+  const isWithinDateFilter = (date) => {
+    const now = new Date()
+    const target = new Date(date)
+
+    switch (filterDate) {
+      case "Today":
+        return target.toDateString() === now.toDateString()
+      case "This Week": {
+        const start = new Date(now)
+        start.setDate(now.getDate() - now.getDay())
+        const end = new Date(start)
+        end.setDate(start.getDate() + 6)
+        return target >= start && target <= end
+      }
+      case "This Month":
+        return target.getMonth() === now.getMonth() && target.getFullYear() === now.getFullYear()
+      case "This Year":
+        return target.getFullYear() === now.getFullYear()
+      default:
+        return true
+    }
+  }
+
+  const filteredRecords = records.filter((rec) => {
+    const matchSearch =
+      !search ||
+      rec.vetLoc.toLowerCase().includes(search.toLowerCase()) ||
+      rec.visitType.toLowerCase().includes(search.toLowerCase())
+
+    const matchPet = filterPet === "all" || rec.petId === filterPet
+    const matchDate = isWithinDateFilter(rec.date)
+
+    return matchSearch && matchPet && matchDate
+  })
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Health Records</Text>
 
-      <Text style={styles.label}>Filter by Pet:</Text>
+      <View style={styles.filtersRow}>
+        <View style={styles.filterWrapper}>
+          <Picker
+            selectedValue={filterPet}
+            onValueChange={setFilterPet}
+            style={styles.filterPicker}
+            dropdownIconColor="#666"
+          >
+            <Picker.Item label="All Pets" value="all" />
+            {pets.map((pet) => (
+              <Picker.Item key={pet.id} label={pet.name} value={pet.id} />
+            ))}
+          </Picker>
+        </View>
+
+        <View style={styles.filterWrapper}>
+          <Picker
+            selectedValue={filterDate}
+            onValueChange={setFilterDate}
+            style={styles.filterPicker}
+            dropdownIconColor="#666"
+          >
+            {dateFilterOptions.map((option) => (
+              <Picker.Item key={option} label={option} value={option} />
+            ))}
+          </Picker>
+        </View>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchBar}
+          placeholder="Search by vet location or visit type..."
+          placeholderTextColor="#666"
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+
       <FlatList
-        horizontal
-        data={pets}
-        keyExtractor={(item) => item}
+        data={filteredRecords}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyList}>
+            <Text style={{ fontFamily: "PoppinsRegular", color: "#666" }}>No health records available.</Text>
+          </View>
+        )}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.petOption, selectedPet === item && styles.selectedOption]}
-            onPress={() => setSelectedPet(item)}
+            onLongPress={() => {
+              Alert.alert("Edit or Delete", "", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Edit", onPress: () => handleEditRecord(item) },
+                { text: "Delete", style: "destructive", onPress: () => handleDeleteRecord(item.id) },
+              ])
+            }}
           >
-            <Text>{item}</Text>
+            <Animatable.View animation="fadeInUp" duration={500} style={styles.card}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={styles.recordName}>{item.visitType}</Text>
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <TouchableOpacity onPress={() => handleEditRecord(item)}>
+                    <Ionicons name="pencil" size={20} color="#4CAF50" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteRecord(item.id)}>
+                    <Ionicons name="trash" size={20} color="#F44336" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <Text style={styles.recordDetails}>Vet Location: {item.vetLoc}</Text>
+              <Text style={styles.recordDetails}>Date: {formatDate(new Date(item.date))}</Text>
+              <Text style={styles.recordDetails}>Time: {formatTime(new Date(item.date))}</Text>
+              <Text style={styles.recordDetails}>Pet: {pets.find((p) => p.id === item.petId)?.name || "Unknown"}</Text>
+              {item.notes ? <Text style={styles.recordDetails}>Notes: {item.notes}</Text> : null}
+            </Animatable.View>
           </TouchableOpacity>
         )}
       />
 
-      <Text style={styles.label}>Filter by Date:</Text>
-      <DateTimePicker
-        value={new Date(selectedDate)}
-        mode="date"
-        display="default"
-        onChange={(event, selectedDate) => {
-          setSelectedDate(selectedDate.toISOString().split("T")[0]);
-        }}
-      />
-
-      <TextInput
-        style={styles.searchBar}
-        placeholder="Search records..."
-        value={search}
-        onChangeText={setSearch}
-      />
-
-      <FlatList
-        data={filteredRecords.filter((record) => record.type.toLowerCase().includes(search.toLowerCase()))}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text>{item.petName} - {item.type}</Text>
-            <Text>Vet: {item.vet}</Text>
-            <Text>Notes: {item.notes}</Text>
-            <Text>Date: {item.date}</Text>
-            <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-              <Text style={{ color: "white" }}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
-
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Text style={{ color: "white", fontSize: 18 }}>+ Add Record</Text>
+        <Text style={styles.addButtonText}>+ Add Record</Text>
       </TouchableOpacity>
 
-      <Modal visible={modalVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Add a New Health Record</Text>
+      <TouchableOpacity onPress={() => navigation.goBack()}>
+        <Text style={styles.backLink}>← Back to Home</Text>
+      </TouchableOpacity>
 
-          <Text style={styles.label}>Select Pet:</Text>
-          <FlatList
-            horizontal
-            data={pets.filter((pet) => pet !== "All")}
-            keyExtractor={(item) => item}
-            renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={[styles.petOption, recordData.petName === item && styles.selectedOption]} 
-                onPress={() => setRecordData({ ...recordData, petName: item })}
-              >
-                <Text>{item}</Text>
+      <Modal visible={modalVisible} animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalContainer}>
+          <ScrollView>
+            <Text style={styles.modalTitle}>{editingRecordId ? "Edit Health Record" : "Add Health Record"}</Text>
+
+            <Text style={styles.label}>Select Pets:</Text>
+            <View style={styles.petChecklistContainer}>
+              <TouchableOpacity style={styles.petCheckboxContainer} onPress={toggleAllPets}>
+                <View style={[styles.checkbox, healthData.petIds.length === pets.length && styles.checkedBox]} />
+                <Text style={styles.checkboxLabel}>All Pets</Text>
               </TouchableOpacity>
+
+              {pets.map((pet) => (
+                <TouchableOpacity
+                  key={pet.id}
+                  style={styles.petCheckboxContainer}
+                  onPress={() => togglePetSelection(pet.id)}
+                >
+                  <View style={[styles.checkbox, healthData.petIds.includes(pet.id) && styles.checkedBox]} />
+                  <Text style={styles.checkboxLabel}>{pet.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Visit Type:</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Check-up, Vaccination..."
+              placeholderTextColor="#666"
+              value={healthData.visitType}
+              onChangeText={(text) => setHealthData({ ...healthData, visitType: text })}
+            />
+
+            <Text style={styles.label}>Veterinarian Location/Clinic:</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter vet's location or clinic name"
+              placeholderTextColor="#666"
+              value={healthData.vetLoc}
+              onChangeText={(text) => setHealthData({ ...healthData, vetLoc: text })}
+            />
+
+            <Text style={styles.label}>Notes (optional):</Text>
+            <TextInput
+              style={[styles.input, { height: 100 }]}
+              multiline
+              placeholder="Any additional notes"
+              placeholderTextColor="#666"
+              value={healthData.notes}
+              onChangeText={(text) => setHealthData({ ...healthData, notes: text })}
+            />
+
+            <Text style={styles.label}>Date:</Text>
+            <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+              <Text style={{ color: "#000", fontFamily: "PoppinsRegular" }}>{formatDate(healthData.date)}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={healthData.date}
+                mode="date"
+                display="default"
+                onChange={onChangeDate}
+                maximumDate={new Date()}
+              />
             )}
-          />
 
-          <Text style={styles.label}>Record Type:</Text>
-          <TextInput style={styles.input} placeholder="Vaccination, Checkup, etc." value={recordData.type} onChangeText={(text) => setRecordData({ ...recordData, type: text })} />
-
-          <Text style={styles.label}>Vet Name:</Text>
-          <TextInput style={styles.input} placeholder="Enter vet name" value={recordData.vet} onChangeText={(text) => setRecordData({ ...recordData, vet: text })} />
-
-          <Text style={styles.label}>Notes:</Text>
-          <TextInput style={styles.input} placeholder="Enter any notes" value={recordData.notes} onChangeText={(text) => setRecordData({ ...recordData, notes: text })} />
-
-          <Text style={styles.label}>Date:</Text>
-          <DateTimePicker
-            value={new Date(recordData.date)}
-            mode="date"
-            display="default"
-            onChange={(event, selectedDate) => {
-              setRecordData({ ...recordData, date: selectedDate.toISOString().split("T")[0] });
-            }}
-          />
-
-          <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={{ color: "white" }}>Cancel</Text>
+            <Text style={styles.label}>Time:</Text>
+            <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker(true)}>
+              <Text style={{ color: "#000", fontFamily: "PoppinsRegular" }}>{formatTime(healthData.date)}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={handleAddRecord}>
-              <Text style={{ color: "white" }}>Save</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+            {showTimePicker && (
+              <DateTimePicker value={healthData.date} mode="time" display="default" onChange={onChangeTime} />
+            )}
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => {
+                  setModalVisible(false)
+                  setEditingRecordId(null)
+                  setHealthData({
+                    petIds: [],
+                    visitType: "",
+                    vetLoc: "",
+                    notes: "",
+                    date: new Date(),
+                  })
+                }}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleAddOrUpdateRecord}>
+                <Text style={styles.buttonText}>{editingRecordId ? "Update" : "Save"}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Toast />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f8f9fa" },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 10 },
-  searchBar: { backgroundColor: "#fff", padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 10 },
-  card: { backgroundColor: "#fff", padding: 15, borderRadius: 10, marginBottom: 10 },
-  deleteButton: { backgroundColor: "red", padding: 8, borderRadius: 8, marginTop: 5, alignItems: "center" },
-  addButton: { backgroundColor: "#007bff", padding: 12, borderRadius: 10, alignItems: "center", marginTop: 10 },
-
-  modalContainer: { flex: 1, justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", padding: 20 },
-  modalTitle: { fontSize: 22, fontWeight: "bold", textAlign: "center", color: "#fff", marginBottom: 15 },
-  label: { fontSize: 16, fontWeight: "bold", color: "#fff", marginBottom: 5 },
-  input: { backgroundColor: "#fff", padding: 12, borderRadius: 10, borderWidth: 1, marginBottom: 10 },
-});
+  container: { flex: 1, backgroundColor: "#f1f8e9", paddingHorizontal: 16, paddingTop: 24 },
+  title: { fontFamily: "PoppinsBold", fontSize: 24, marginBottom: 12 },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderColor: "#CCC",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    marginBottom: 16,
+    backgroundColor: "#fff",
+  },
+  searchIcon: { marginRight: 6 },
+  searchBar: { flex: 1, height: 40, fontFamily: "PoppinsRegular", color: "#000", marginTop: 10 },
+  filtersRow: { flexDirection: "row", marginBottom: 12 },
+  filterWrapper: { flex: 1, marginHorizontal: 4, backgroundColor: "#fff", borderRadius: 8 },
+  filterPicker: { height: 50, width: "100%" },
+  emptyList: { alignItems: "center", marginTop: 20 },
+  card: {
+    backgroundColor: "#FFF",
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  recordName: { fontFamily: "PoppinsBold", fontSize: 18, marginBottom: 6 },
+  recordDetails: { fontFamily: "PoppinsRegular", fontSize: 14, color: "#333" },
+  addButton: {
+    backgroundColor: "#81C784",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  addButtonText: { fontFamily: "PoppinsBold", color: "#FFF", fontSize: 18 },
+  backLink: { fontFamily: "PoppinsBold", color: "#007AFF", fontSize: 16, textAlign: "center", marginBottom: 20 },
+  modalContainer: { flex: 1, backgroundColor: "#f1f8e9", padding: 16 },
+  modalTitle: { fontFamily: "PoppinsBold", fontSize: 22, marginBottom: 12, textAlign: "center" },
+  label: { fontFamily: "PoppinsBold", fontSize: 16, marginBottom: 6 },
+  input: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === "ios" ? 12 : 8,
+    fontFamily: "PoppinsRegular",
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 24 },
+  button: { flex: 1, paddingVertical: 14, borderRadius: 8, alignItems: "center" },
+  cancelButton: { backgroundColor: "#81C784", marginRight: 10 },
+  saveButton: { backgroundColor: "#FF7F50", marginLeft: 10 },
+  buttonText: { fontFamily: "PoppinsBold", fontSize: 16, color: "#fff" },
+  petChecklistContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 16,
+  },
+  petCheckboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 15,
+    marginBottom: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    marginRight: 6,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+  },
+  checkedBox: {
+    backgroundColor: "#FF7F50",
+    borderColor: "#FF7F50",
+  },
+  checkboxLabel: {
+    marginTop: 3,
+    fontFamily: "PoppinsRegular",
+    fontSize: 14,
+  },
+})
