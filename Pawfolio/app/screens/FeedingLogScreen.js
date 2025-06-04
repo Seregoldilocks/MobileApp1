@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react"
 import {
   View,
   Text,
@@ -10,36 +10,38 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
-} from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { Ionicons } from "@expo/vector-icons";
-import { useFonts } from "expo-font";
-import Toast from "react-native-toast-message";
-import { useNavigation } from "@react-navigation/native";
-import * as Animatable from "react-native-animatable";
+  Alert,
+} from "react-native"
+import { Picker } from "@react-native-picker/picker"
+import DateTimePicker from "@react-native-community/datetimepicker"
+import { Ionicons } from "@expo/vector-icons"
+import { useFonts } from "expo-font"
+import Toast from "react-native-toast-message"
+import { useNavigation } from "@react-navigation/native"
+import * as Animatable from "react-native-animatable"
 
 export default function FeedingLogScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation()
 
   const [fontsLoaded] = useFonts({
     PoppinsRegular: require("../../assets/fonts/Poppins-Regular.ttf"),
     PoppinsBold: require("../../assets/fonts/Poppins-Bold.ttf"),
-  });
+  })
 
   const [pets, setPets] = useState([
     { id: "1", name: "Max" },
     { id: "2", name: "Bella" },
     { id: "3", name: "Charlie" },
-  ]);
+  ])
 
-  const [meals, setMeals] = useState([]);
-  const [search, setSearch] = useState("");
-  const [filterPet, setFilterPet] = useState("");
-  const [filterDate, setFilterDate] = useState("All");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [meals, setMeals] = useState([])
+  const [search, setSearch] = useState("")
+  const [filterPet, setFilterPet] = useState("")
+  const [filterDate, setFilterDate] = useState("All")
+  const [modalVisible, setModalVisible] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
+  const [editingMealId, setEditingMealId] = useState(null)
 
   const [mealData, setMealData] = useState({
     petIds: [],
@@ -48,33 +50,21 @@ export default function FeedingLogScreen() {
     quantityUnit: "",
     date: new Date(),
     mealType: "Breakfast",
-  });
+  })
 
-  const mealTypes = [
-    "Breakfast",
-    "Lunch",
-    "Snacks",
-    "Dinner",
-    "One Meal Only for a Day",
-  ];
+  const mealTypes = ["Breakfast", "Lunch", "Snacks", "Dinner", "Once a Day"]
 
-  const dateFilterOptions = [
-    "All",
-    "Today",
-    "This Week",
-    "This Month",
-    "This Year",
-  ];
+  const dateFilterOptions = ["All", "Today", "This Week", "This Month", "This Year"]
 
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
         <Text>Loading fonts...</Text>
       </View>
-    );
+    )
   }
 
-  const handleAddMeal = () => {
+  const handleAddOrUpdateMeal = () => {
     if (
       mealData.petIds.length === 0 ||
       !mealData.foodType ||
@@ -86,15 +76,40 @@ export default function FeedingLogScreen() {
       Toast.show({
         type: "error",
         text1: "Please fill all fields and select at least one pet.",
-      });
-      return;
+      })
+      return
     }
-    const newMeal = {
-      ...mealData,
-      id: String(Date.now()),
-    };
-    setMeals([newMeal, ...meals]);
-    setModalVisible(false);
+
+    if (editingMealId) {
+      // Update existing meal
+      setMeals((prevMeals) =>
+        prevMeals.map((meal) =>
+          meal.id === editingMealId
+            ? {
+                ...meal,
+                petIds: mealData.petIds,
+                foodType: mealData.foodType,
+                quantityNumber: mealData.quantityNumber,
+                quantityUnit: mealData.quantityUnit,
+                date: mealData.date,
+                mealType: mealData.mealType,
+              }
+            : meal,
+        ),
+      )
+      Toast.show({ type: "success", text1: "Meal updated successfully!" })
+    } else {
+      // Add new meal
+      const newMeal = {
+        ...mealData,
+        id: String(Date.now()),
+      }
+      setMeals([newMeal, ...meals])
+      Toast.show({ type: "success", text1: "Meal added successfully!" })
+    }
+
+    setModalVisible(false)
+    setEditingMealId(null)
     setMealData({
       petIds: [],
       foodType: "",
@@ -102,90 +117,109 @@ export default function FeedingLogScreen() {
       quantityUnit: "grams",
       date: new Date(),
       mealType: "Breakfast",
-    });
-    Toast.show({ type: "success", text1: "Meal added successfully!" });
-  };
+    })
+  }
+
+  const handleEditMeal = (meal) => {
+    setEditingMealId(meal.id)
+    setMealData({
+      petIds: meal.petIds,
+      foodType: meal.foodType,
+      quantityNumber: meal.quantityNumber,
+      quantityUnit: meal.quantityUnit,
+      date: new Date(meal.date),
+      mealType: meal.mealType,
+    })
+    setModalVisible(true)
+  }
+
+  const handleDeleteMeal = (mealId) => {
+    Alert.alert("Delete Meal", "Are you sure you want to delete this meal?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        onPress: () => {
+          setMeals((prevMeals) => prevMeals.filter((meal) => meal.id !== mealId))
+          Toast.show({ type: "success", text1: "Meal deleted successfully!" })
+        },
+        style: "destructive",
+      },
+    ])
+  }
 
   const togglePetSelection = (id) => {
     setMealData((prev) => ({
       ...prev,
-      petIds: prev.petIds.includes(id)
-        ? prev.petIds.filter((pid) => pid !== id)
-        : [...prev.petIds, id],
-    }));
-  };
+      petIds: prev.petIds.includes(id) ? prev.petIds.filter((pid) => pid !== id) : [...prev.petIds, id],
+    }))
+  }
 
   const toggleAllPets = () => {
     setMealData((prev) => ({
       ...prev,
       petIds: prev.petIds.length === pets.length ? [] : pets.map((p) => p.id),
-    }));
-  };
+    }))
+  }
 
-  const formatDate = (date) => date.toISOString().split("T")[0];
+  const formatDate = (date) => date.toISOString().split("T")[0]
 
-  const formatTime = (date) =>
-    date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const formatTime = (date) => date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
 
   const filteredMeals = meals.filter((meal) => {
     if (filterPet && filterPet !== "all") {
-      if (!meal.petIds.includes(filterPet)) return false;
+      if (!meal.petIds.includes(filterPet)) return false
     }
-    const mealDate = new Date(meal.date);
-    const today = new Date();
+    const mealDate = new Date(meal.date)
+    const today = new Date()
     switch (filterDate) {
       case "Today":
-        if (mealDate.toDateString() !== today.toDateString()) return false;
-        break;
+        if (mealDate.toDateString() !== today.toDateString()) return false
+        break
       case "This Week": {
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        if (mealDate < startOfWeek || mealDate > endOfWeek) return false;
-        break;
+        const startOfWeek = new Date(today)
+        startOfWeek.setDate(today.getDate() - today.getDay())
+        const endOfWeek = new Date(startOfWeek)
+        endOfWeek.setDate(startOfWeek.getDate() + 6)
+        if (mealDate < startOfWeek || mealDate > endOfWeek) return false
+        break
       }
       case "This Month":
-        if (
-          mealDate.getMonth() !== today.getMonth() ||
-          mealDate.getFullYear() !== today.getFullYear()
-        )
-          return false;
-        break;
+        if (mealDate.getMonth() !== today.getMonth() || mealDate.getFullYear() !== today.getFullYear()) return false
+        break
       case "This Year":
-        if (mealDate.getFullYear() !== today.getFullYear()) return false;
-        break;
+        if (mealDate.getFullYear() !== today.getFullYear()) return false
+        break
     }
     if (
       search &&
       !meal.foodType.toLowerCase().includes(search.toLowerCase()) &&
       !meal.mealType.toLowerCase().includes(search.toLowerCase())
     ) {
-      return false;
+      return false
     }
-    return true;
-  });
+    return true
+  })
 
   const onChangeDate = (event, selectedDate) => {
-    setShowDatePicker(false);
+    setShowDatePicker(false)
     if (selectedDate) {
-      const current = new Date(mealData.date);
-      current.setFullYear(selectedDate.getFullYear());
-      current.setMonth(selectedDate.getMonth());
-      current.setDate(selectedDate.getDate());
-      setMealData({ ...mealData, date: current });
+      const current = new Date(mealData.date)
+      current.setFullYear(selectedDate.getFullYear())
+      current.setMonth(selectedDate.getMonth())
+      current.setDate(selectedDate.getDate())
+      setMealData({ ...mealData, date: current })
     }
-  };
+  }
 
   const onChangeTime = (event, selectedTime) => {
-    setShowTimePicker(false);
+    setShowTimePicker(false)
     if (selectedTime) {
-      const current = new Date(mealData.date);
-      current.setHours(selectedTime.getHours());
-      current.setMinutes(selectedTime.getMinutes());
-      setMealData({ ...mealData, date: current });
+      const current = new Date(mealData.date)
+      current.setHours(selectedTime.getHours())
+      current.setMinutes(selectedTime.getMinutes())
+      setMealData({ ...mealData, date: current })
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
@@ -236,35 +270,50 @@ export default function FeedingLogScreen() {
         keyExtractor={(item) => item.id}
         ListEmptyComponent={() => (
           <View style={styles.emptyList}>
-            <Text style={{ fontFamily: "PoppinsRegular", color: "#666" }}>
-              No meals logged.
-            </Text>
+            <Text style={{ fontFamily: "PoppinsRegular", color: "#666" }}>No meals logged.</Text>
           </View>
         )}
         renderItem={({ item }) => (
-          <Animatable.View animation="fadeInUp" duration={500} style={styles.card}>
-            <Text style={styles.mealName}>
-              {item.foodType} ({item.mealType})
-            </Text>
-            <Text style={styles.mealDetails}>
-              Quantity: {item.quantityNumber} {item.quantityUnit}
-            </Text>
-            <Text style={styles.mealDetails}>
-              Date: {formatDate(new Date(item.date))}
-            </Text>
-            <Text style={styles.mealDetails}>
-              Time: {formatTime(new Date(item.date))}
-            </Text>
-            <Text style={styles.mealDetails}>
-              Pets:{" "}
-              {item.petIds.length === pets.length
-                ? "All Pets"
-                : item.petIds
-                    .map((pid) => pets.find((p) => p.id === pid)?.name)
-                    .filter(Boolean)
-                    .join(", ")}
-            </Text>
-          </Animatable.View>
+          <TouchableOpacity
+            onLongPress={() => {
+              Alert.alert("Edit or Delete", "", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Edit", onPress: () => handleEditMeal(item) },
+                { text: "Delete", style: "destructive", onPress: () => handleDeleteMeal(item.id) },
+              ])
+            }}
+          >
+            <Animatable.View animation="fadeInUp" duration={500} style={styles.card}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={styles.mealName}>
+                  {item.foodType}({item.mealType})
+                </Text>
+                
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <TouchableOpacity onPress={() => handleEditMeal(item)}>
+                    <Ionicons name="pencil" size={20} color="#4CAF50" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteMeal(item.id)}>
+                    <Ionicons name="trash" size={20} color="#F44336" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text style={styles.mealDetails}>
+                Quantity: {item.quantityNumber} {item.quantityUnit}
+              </Text>
+              <Text style={styles.mealDetails}>Date: {formatDate(new Date(item.date))}</Text>
+              <Text style={styles.mealDetails}>Time: {formatTime(new Date(item.date))}</Text>
+              <Text style={styles.mealDetails}>
+                Pets:{" "}
+                {item.petIds.length === pets.length
+                  ? "All Pets"
+                  : item.petIds
+                      .map((pid) => pets.find((p) => p.id === pid)?.name)
+                      .filter(Boolean)
+                      .join(", ")}
+              </Text>
+            </Animatable.View>
+          </TouchableOpacity>
         )}
       />
 
@@ -277,25 +326,14 @@ export default function FeedingLogScreen() {
       </TouchableOpacity>
 
       <Modal visible={modalVisible} animationType="slide" transparent={false}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.modalContainer}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalContainer}>
           <ScrollView>
-            <Text style={styles.modalTitle}>Add a New Meal</Text>
+            <Text style={styles.modalTitle}>{editingMealId ? "Edit Meal" : "Add a New Meal"}</Text>
 
             <Text style={styles.label}>Select Pets:</Text>
             <View style={styles.petChecklistContainer}>
-              <TouchableOpacity
-                style={styles.petCheckboxContainer}
-                onPress={toggleAllPets}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    mealData.petIds.length === pets.length && styles.checkedBox,
-                  ]}
-                />
+              <TouchableOpacity style={styles.petCheckboxContainer} onPress={toggleAllPets}>
+                <View style={[styles.checkbox, mealData.petIds.length === pets.length && styles.checkedBox]} />
                 <Text style={styles.checkboxLabel}>All Pets</Text>
               </TouchableOpacity>
 
@@ -305,12 +343,7 @@ export default function FeedingLogScreen() {
                   style={styles.petCheckboxContainer}
                   onPress={() => togglePetSelection(pet.id)}
                 >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      mealData.petIds.includes(pet.id) && styles.checkedBox,
-                    ]}
-                  />
+                  <View style={[styles.checkbox, mealData.petIds.includes(pet.id) && styles.checkedBox]} />
                   <Text style={styles.checkboxLabel}>{pet.name}</Text>
                 </TouchableOpacity>
               ))}
@@ -321,7 +354,7 @@ export default function FeedingLogScreen() {
               <Picker
                 selectedValue={mealData.mealType}
                 onValueChange={(val) => setMealData({ ...mealData, mealType: val })}
-                style={{ height: 50 }}
+                style={{ height: 60 }}
                 dropdownIconColor="#666"
               >
                 {mealTypes.map((type) => (
@@ -349,7 +382,7 @@ export default function FeedingLogScreen() {
                 keyboardType="numeric"
                 onChangeText={(text) => {
                   if (/^\d*\.?\d*$/.test(text)) {
-                    setMealData({ ...mealData, quantityNumber: text });
+                    setMealData({ ...mealData, quantityNumber: text })
                   }
                 }}
               />
@@ -358,20 +391,13 @@ export default function FeedingLogScreen() {
                 placeholder="Unit"
                 placeholderTextColor="#666"
                 value={mealData.quantityUnit}
-                onChangeText={(text) =>
-                  setMealData({ ...mealData, quantityUnit: text })
-                }
+                onChangeText={(text) => setMealData({ ...mealData, quantityUnit: text })}
               />
             </View>
 
             <Text style={styles.label}>Date:</Text>
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={{ color: "#000", fontFamily: "PoppinsRegular" }}>
-                {formatDate(mealData.date)}
-              </Text>
+            <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+              <Text style={{ color: "#000", fontFamily: "PoppinsRegular" }}>{formatDate(mealData.date)}</Text>
             </TouchableOpacity>
             {showDatePicker && (
               <DateTimePicker
@@ -384,35 +410,33 @@ export default function FeedingLogScreen() {
             )}
 
             <Text style={styles.label}>Time:</Text>
-            <TouchableOpacity
-              style={styles.input}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Text style={{ color: "#000", fontFamily: "PoppinsRegular" }}>
-                {formatTime(mealData.date)}
-              </Text>
+            <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker(true)}>
+              <Text style={{ color: "#000", fontFamily: "PoppinsRegular" }}>{formatTime(mealData.date)}</Text>
             </TouchableOpacity>
             {showTimePicker && (
-              <DateTimePicker
-                value={mealData.date}
-                mode="time"
-                display="default"
-                onChange={onChangeTime}
-              />
+              <DateTimePicker value={mealData.date} mode="time" display="default" onChange={onChangeTime} />
             )}
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
+                onPress={() => {
+                  setModalVisible(false)
+                  setEditingMealId(null)
+                  setMealData({
+                    petIds: [],
+                    foodType: "",
+                    quantityNumber: "",
+                    quantityUnit: "grams",
+                    date: new Date(),
+                    mealType: "Breakfast",
+                  })
+                }}
               >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.saveButton]}
-                onPress={handleAddMeal}
-              >
-                <Text style={styles.buttonText}>Save</Text>
+              <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={handleAddOrUpdateMeal}>
+                <Text style={styles.buttonText}>{editingMealId ? "Update" : "Save"}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -421,7 +445,7 @@ export default function FeedingLogScreen() {
 
       <Toast />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -476,7 +500,7 @@ const styles = StyleSheet.create({
     height: 40,
     fontFamily: "PoppinsRegular",
     color: "#000",
-    marginTop: 10
+    marginTop: 10,
   },
   emptyList: {
     alignItems: "center",
@@ -606,4 +630,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#fff",
   },
-});
+})
