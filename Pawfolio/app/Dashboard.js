@@ -7,44 +7,27 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Modal,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
 import Toast from "react-native-toast-message";
 import FlipCard from "react-native-flip-card";
-
-const pets = [
-  {
-    id: "1",
-    name: "Buddy",
-    type: "Dog",
-    breed: "Golden Retriever",
-    gender: "Male",
-    birthday: "2019-06-15",
-    weight: "30 kg",
-    lastActivity: "Walked 30 mins",
-    image: require("../assets/images/dog.png"),
-  },
-  {
-    id: "2",
-    name: "Whiskers",
-    type: "Cat",
-    breed: "Siamese",
-    gender: "Female",
-    birthday: "2020-08-10",
-    weight: "5 kg",
-    lastActivity: "Played with toy",
-    image: require("../assets/images/cat.png"),
-  },
-];
+import { useFonts } from "expo-font";
 
 const Dashboard = () => {
+  const [fontsLoaded] = useFonts({
+    PoppinsRegular: require("../assets/fonts/Poppins-Regular.ttf"),
+    PoppinsBold: require("../assets/fonts/Poppins-Bold.ttf"),
+  });
+
   const navigation = useNavigation();
   const route = useRoute();
   const [vaccinationReminder, setVaccinationReminder] = useState(
     "Next: Rabies Shot - June 10"
   );
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     if (route?.params?.fromLogin) {
@@ -68,14 +51,52 @@ const Dashboard = () => {
     navigation.navigate(screen);
   };
 
+  const handleLogout = () => {
+    setModalVisible(true);
+  };
+
+  const confirmLogout = () => {
+    Toast.show({
+      type: "info",
+      text1: "Logging out...",
+      text2: "See you next time!",
+      visibilityTime: 2000,
+    });
+    setModalVisible(false);
+    navigation.navigate("Login");
+  };
+
+  if (!fontsLoaded) return null;
+
+  const pets = [
+    {
+      id: "1",
+      name: "Buddy",
+      type: "Dog",
+      breed: "Golden Retriever",
+      gender: "Male",
+      birthday: "2019-06-15",
+      weight: "30 kg",
+      lastActivity: "Walked 30 mins",
+      image: require("../assets/images/dog.png"),
+    },
+    {
+      id: "2",
+      name: "Whiskers",
+      type: "Cat",
+      breed: "Siamese",
+      gender: "Female",
+      birthday: "2020-08-10",
+      weight: "5 kg",
+      lastActivity: "Played with toy",
+      image: require("../assets/images/cat.png"),
+    },
+  ];
+
   return (
     <ScrollView style={styles.container}>
-      {/* Logo + Welcome Banner */}
       <Animatable.View animation="slideInDown" style={styles.header}>
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={styles.logo}
-        />
+        <Image source={require("../assets/images/logo.png")} style={styles.logo} />
         <View style={styles.bannerContainer}>
           <Text style={styles.bannerText}>
             Bringing you closer to your furry friends—because every wag matters!
@@ -83,7 +104,7 @@ const Dashboard = () => {
         </View>
       </Animatable.View>
 
-     {/* Pet Profile Cards */}
+      {/* Pet Profile Cards */}
       <View style={styles.section}>
         <View style={styles.headerContainer}>
           <TouchableOpacity onPress={() => handleNavigation("PetManagement")}>
@@ -99,7 +120,6 @@ const Dashboard = () => {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <FlipCard style={styles.petCard} flipHorizontal flipVertical={false}>
-              {/* Front */}
               <View style={styles.petCard}>
                 <View style={styles.petImageContainer}>
                   <Image source={item.image} style={styles.petImage} />
@@ -107,8 +127,6 @@ const Dashboard = () => {
                 <Text style={styles.petName}>{item.name}</Text>
                 <Text style={styles.petDetails}>{item.breed}</Text>
               </View>
-
-              {/* Back */}
               <View style={styles.petCard}>
                 <Text style={styles.petName}>{item.name}</Text>
                 <Text style={styles.petDetails}>Type: {item.type}</Text>
@@ -116,9 +134,7 @@ const Dashboard = () => {
                 <Text style={styles.petDetails}>Gender: {item.gender}</Text>
                 <Text style={styles.petDetails}>Birthday: {item.birthday}</Text>
                 <Text style={styles.petDetails}>Weight: {item.weight}</Text>
-                <Text style={styles.lastActivity}>
-                  Last Activity: {item.lastActivity}
-                </Text>
+                <Text style={styles.lastActivity}>Last Activity: {item.lastActivity}</Text>
               </View>
             </FlipCard>
           )}
@@ -129,24 +145,15 @@ const Dashboard = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🚀 Quick Actions</Text>
         <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleNavigation("FeedingLog")}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleNavigation("FeedingLog")}>
             <Ionicons name="restaurant" size={30} color="white" />
             <Text style={styles.actionText}>Log Meal</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleNavigation("ActivityLog")}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleNavigation("ActivityLog")}>
             <Ionicons name="footsteps" size={30} color="white" />
             <Text style={styles.actionText}>Log Activity</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleNavigation("HealthRecords")}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleNavigation("HealthRecords")}>
             <Ionicons name="medkit" size={30} color="white" />
             <Text style={styles.actionText}>Update Health</Text>
           </TouchableOpacity>
@@ -175,6 +182,31 @@ const Dashboard = () => {
         </View>
       </View>
 
+      {/* Logout */}
+      <View style={styles.section}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color="white" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Logout Modal */}
+      <Modal transparent={true} visible={modalVisible} animationType="fade">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>Are you sure you want to log out?</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.logoutButton} onPress={confirmLogout}>
+                <Text style={styles.logoutText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Toast />
     </ScrollView>
   );
@@ -190,11 +222,24 @@ const styles = StyleSheet.create({
     padding: 8,
     flex: 1,
   },
-  bannerText: { fontSize: 14, fontWeight: "bold", color: "white" },
-  headerContainer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  bannerText: {
+    fontSize: 14,
+    fontFamily: "PoppinsBold",
+    color: "white",
+  },
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   addButton: { padding: 5 },
   section: { padding: 10, marginBottom: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10, color: "#333" },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: "PoppinsBold",
+    marginBottom: 10,
+    color: "#333",
+  },
   petCard: {
     padding: 10,
     backgroundColor: "white",
@@ -210,10 +255,30 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   petImage: { width: 80, height: 80, borderRadius: 40 },
-  petName: { fontSize: 16, fontWeight: "bold", marginTop: 5, marginBottom: 4 },
-  petDetails: { fontSize: 14, color: "#555", marginBottom: 2, textAlign: "center" },
-  lastActivity: { fontSize: 12, color: "#888", marginTop: 6, textAlign: "center" },
-  quickActions: { flexDirection: "row", justifyContent: "space-between" },
+  petName: {
+    fontSize: 16,
+    fontFamily: "PoppinsBold",
+    marginTop: 5,
+    marginBottom: 4,
+  },
+  petDetails: {
+    fontSize: 14,
+    fontFamily: "PoppinsRegular",
+    color: "#555",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  lastActivity: {
+    fontSize: 12,
+    fontFamily: "PoppinsRegular",
+    color: "#888",
+    marginTop: 6,
+    textAlign: "center",
+  },
+  quickActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   actionButton: {
     padding: 12,
     backgroundColor: "#81C784",
@@ -221,7 +286,13 @@ const styles = StyleSheet.create({
     width: "30%",
     borderRadius: 10,
   },
-  actionText: { color: "white", fontSize: 14, marginTop: 4, textAlign: "center" },
+  actionText: {
+    color: "white",
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: "center",
+    fontFamily: "PoppinsRegular",
+  },
   vaccineReminder: {
     padding: 12,
     backgroundColor: "#E57373",
@@ -229,7 +300,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 10,
   },
-  vaccineText: { color: "white", fontSize: 14, marginLeft: 10 },
+  vaccineText: {
+    color: "white",
+    fontSize: 14,
+    marginLeft: 10,
+    fontFamily: "PoppinsRegular",
+  },
   logContainer: {
     borderWidth: 2,
     borderColor: "#ccc",
@@ -238,7 +314,64 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     marginVertical: 10,
   },
-  recentLog: { fontSize: 14, marginVertical: 2, color: "#444" },
+  recentLog: {
+    fontSize: 14,
+    marginVertical: 2,
+    color: "#444",
+    fontFamily: "PoppinsRegular",
+  },
+  logoutButton: {
+    padding: 12,
+    backgroundColor: "#E57373",
+    borderRadius: 10,
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  logoutText: {
+    color: "white",
+    fontSize: 16,
+    fontFamily: "PoppinsBold",
+    marginLeft: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "100%",
+    marginTop: 20,
+    marginRight: 30,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#4CAF50",
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginHorizontal: 30,
+    alignItems: "center",
+  },
+  cancelText: {
+    color: "white",
+    fontSize: 16,
+    fontFamily: "PoppinsBold",
+  },
 });
 
 export default Dashboard;
