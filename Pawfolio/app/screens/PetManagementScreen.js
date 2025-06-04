@@ -17,7 +17,7 @@ import { Picker } from "@react-native-picker/picker";
 import Toast from "react-native-toast-message";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Animatable from "react-native-animatable";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { useNavigation } from "@react-navigation/native";
 
@@ -33,6 +33,8 @@ export default function PetManagementScreen() {
   const [search, setSearch] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [petData, setPetData] = useState({
     name: "",
     type: "",
@@ -51,7 +53,20 @@ export default function PetManagementScreen() {
     );
   }
 
-  const handleAddPet = () => {
+  const resetForm = () => {
+    setPetData({
+      name: "",
+      type: "",
+      breed: "",
+      gender: "",
+      birthday: "",
+      weight: "",
+    });
+    setIsEditing(false);
+    setEditingId(null);
+  };
+
+  const handleSavePet = () => {
     if (
       !petData.name ||
       !petData.type ||
@@ -64,17 +79,18 @@ export default function PetManagementScreen() {
       return;
     }
 
-    setPets([...pets, { ...petData, id: String(Date.now()) }]);
+    if (isEditing) {
+      setPets((prev) =>
+        prev.map((pet) => (pet.id === editingId ? { ...petData, id: editingId } : pet))
+      );
+      Toast.show({ type: "success", text1: "Pet Updated Successfully!" });
+    } else {
+      setPets([...pets, { ...petData, id: String(Date.now()) }]);
+      Toast.show({ type: "success", text1: "Pet Added Successfully!" });
+    }
+
     setModalVisible(false);
-    setPetData({
-      name: "",
-      type: "",
-      breed: "",
-      gender: "",
-      birthday: "",
-      weight: "",
-    });
-    Toast.show({ type: "success", text1: "Pet Added Successfully!" });
+    resetForm();
     setWeightError(false);
   };
 
@@ -89,6 +105,13 @@ export default function PetManagementScreen() {
         },
       },
     ]);
+  };
+
+  const handleEdit = (pet) => {
+    setPetData(pet);
+    setEditingId(pet.id);
+    setIsEditing(true);
+    setModalVisible(true);
   };
 
   const onChangeBirthday = (event, selectedDate) => {
@@ -141,22 +164,28 @@ export default function PetManagementScreen() {
             <Text style={styles.petDetails}>
               {item.breed} | {item.gender} | {item.birthday} | {item.weight} kg
             </Text>
-            <TouchableOpacity
-              onPress={() => handleDelete(item.id)}
-              style={styles.deleteButton}
-            >
-              <Text style={styles.deleteText}>Delete</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 5 }}>
+              <TouchableOpacity
+                onPress={() => handleEdit(item)}
+                style={[styles.deleteButton, { backgroundColor: "#FFD54F" }]}
+              >
+                <Feather name="edit" size={18} color="#000" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDelete(item.id)}
+                style={styles.deleteButton}
+              >
+                <Feather name="trash-2" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </Animatable.View>
         )}
       />
 
-      
       <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.addButtonText}>+ Add Pet</Text>
       </TouchableOpacity>
 
-      {/* ← Back to Home text button */}
       <TouchableOpacity onPress={() => navigation.navigate("Dashboard")}>
         <Text style={styles.backLink}>← Back to Home</Text>
       </TouchableOpacity>
@@ -167,7 +196,7 @@ export default function PetManagementScreen() {
           style={styles.modalContainer}
         >
           <ScrollView>
-            <Text style={styles.modalTitle}>Add a New Pet</Text>
+            <Text style={styles.modalTitle}>{isEditing ? "Edit Pet" : "Add a New Pet"}</Text>
 
             <Text style={styles.label}>Name:</Text>
             <TextInput
@@ -273,13 +302,16 @@ export default function PetManagementScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
-                onPress={() => setModalVisible(false)}
+                onPress={() => {
+                  setModalVisible(false);
+                  resetForm();
+                }}
               >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.saveButton]}
-                onPress={handleAddPet}
+                onPress={handleSavePet}
               >
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
