@@ -16,7 +16,6 @@ const Stack = createStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
       <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
         {/* Authentication Screens */}
         <Stack.Screen name="Login" component={LoginScreen} />
@@ -33,6 +32,5 @@ export default function App() {
         {/* Optional: Uncomment when ready to use HomeDrawer */}
         {/* <Stack.Screen name="HomeDrawer" component={HomeDrawer} /> */}
       </Stack.Navigator>
-    </NavigationContainer>
   );
 }
