@@ -251,11 +251,40 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f9fa" },
   scrollContainer: { paddingHorizontal: 24, paddingVertical: 20 },
   logo: { width: 90, height: 90, alignSelf: "center", marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: "bold", textAlign: "center", marginBottom: 10 },
-  instructions: { marginBottom: 20, textAlign: "center", color: "#666", fontSize: 14 },
+  
+  title: { 
+    fontSize: 22, 
+    fontWeight: "bold", 
+    textAlign: "center", 
+    marginBottom: 10,
+    fontFamily: "PoppinsBold",
+  },
+  
+  instructions: { 
+    marginBottom: 20, 
+    textAlign: "center", 
+    color: "#666", 
+    fontSize: 14,
+    fontFamily: "PoppinsRegular",
+  },
+  
   inputContainer: { marginBottom: 14 },
-  label: { fontSize: 14, fontWeight: "bold", color: "#444" },
-  label1: { fontSize: 14, fontWeight: "bold", color: "#444", marginBottom: 4 },
+  
+  label: { 
+    fontSize: 14, 
+    fontWeight: "bold", 
+    color: "#444", 
+    fontFamily: "PoppinsBold",
+  },
+  
+  label1: { 
+    fontSize: 14, 
+    fontWeight: "bold", 
+    color: "#444", 
+    marginBottom: 4,
+    fontFamily: "PoppinsBold",
+  },
+  
   input: {
     backgroundColor: "#fff",
     padding: 12,
@@ -263,25 +292,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
     marginTop: 4,
+    fontFamily: "PoppinsRegular",
   },
+  
   inputPassword: {
     flex: 1,
     padding: 12,
+    fontFamily: "PoppinsRegular",
   },
+  
   pickerWrapper: {
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 10,
     overflow: "hidden",
   },
+  
   picker: {
     backgroundColor: "#fff",
+    fontFamily: "PoppinsRegular",
   },
+  
   pickerlabel: {
     color: "#666",
     fontSize: 14,
     padding: 10,
+    fontFamily: "PoppinsRegular",
   },
+  
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -292,6 +330,7 @@ const styles = StyleSheet.create({
     paddingRight: 10,
     marginTop: 4,
   },
+  
   button: {
     backgroundColor: "#81C784",
     padding: 12,
@@ -299,9 +338,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  linkText: { color: "#007bff", fontSize: 14, textAlign: "center", marginTop: 20 },
-  errorText: { color: "red", fontSize: 12, marginTop: 4 },
+  
+  buttonText: { 
+    color: "#fff", 
+    fontWeight: "600", 
+    fontSize: 16, 
+    fontFamily: "PoppinsBold",
+  },
+  
+  linkText: { 
+    color: "#007bff", 
+    fontSize: 14, 
+    textAlign: "center", 
+    marginTop: 20,
+    fontFamily: "PoppinsRegular",
+  },
+  
+  errorText: { 
+    color: "red", 
+    fontSize: 12, 
+    marginTop: 4,
+    fontFamily: "PoppinsRegular",
+  },
 });
 
 export default RegisterScreen;
