@@ -572,6 +572,7 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
     marginRight: 6,
     borderRadius: 4,
+    backgroundColor: "#fff",
   },
   checkedBox: {
     backgroundColor: "#FF7F50",
